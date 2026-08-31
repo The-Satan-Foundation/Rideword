@@ -143,7 +143,10 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
   })
   const [ready, setReady] = useState(false)
   const stateRef = useRef(state)
-  const persist = useRef(false)
+  // Skip the very first persist run — it fires with the empty initial state on
+  // mount and would clobber whatever is already saved before the load effect
+  // has a chance to hydrate it.
+  const skipNextPersist = useRef(true)
 
   // Keep a ref mirror so async actions always read the latest committed state.
   const setState = useCallback(

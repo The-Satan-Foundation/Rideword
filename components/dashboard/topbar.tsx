@@ -18,7 +18,7 @@ import {
 import { HashChip } from '@/components/hash-chip'
 import { useAegis } from '@/lib/store'
 
-export function Topbar({ title }: { title: string }) {
+export function Topbar() {
   const router = useRouter()
   const { identity, resetAll } = useAegis()
   if (!identity) return null
@@ -36,24 +36,19 @@ export function Topbar({ title }: { title: string }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-border/60 bg-background/70 px-5 py-3.5 backdrop-blur-xl sm:px-8">
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
-      </div>
+    <header className="sticky top-0 z-30 flex items-center justify-end gap-4 border-b border-border/60 bg-background/70 px-5 py-3.5 backdrop-blur-xl sm:px-8">
       <div className="flex items-center gap-3">
         <div className="hidden sm:block">
           <HashChip label="addr" value={identity.address} />
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-full border border-border bg-secondary/40 py-1 pl-1 pr-3 transition hover:border-primary/40">
-              <Avatar className="size-7">
-                <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <span className="hidden text-sm font-medium sm:block">{identity.displayName}</span>
-            </button>
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-full border border-border bg-secondary/40 py-1 pl-1 pr-3 transition hover:border-primary/40">
+            <Avatar className="size-7">
+              <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <span className="hidden text-sm font-medium sm:block">{identity.displayName}</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel>

@@ -2,6 +2,7 @@ import {
   BadgeCheck,
   CircleAlert,
   CircleSlash,
+  Clock,
   Loader2,
   ShieldQuestion,
 } from 'lucide-react'
@@ -32,6 +33,11 @@ const CONFIG: Record<
     label: 'Needs review',
     className: 'border-accent/40 bg-accent/10 text-accent',
     Icon: CircleAlert,
+  },
+  pending_issuer: {
+    label: 'Awaiting issuer',
+    className: 'border-accent/40 bg-accent/10 text-accent',
+    Icon: Clock,
   },
   rejected: {
     label: 'Rejected',

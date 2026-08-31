@@ -17,6 +17,7 @@ export type VerificationStatus =
   | 'verifying'
   | 'verified'
   | 'needs_review'
+  | 'pending_issuer' // held until the issuing institution opts into the consortium
   | 'rejected'
 
 export interface VerificationCheck {
@@ -34,6 +35,10 @@ export interface VerificationResult {
   confidence: number // 0-100
   checks: VerificationCheck[]
   issuerResolved: boolean
+  /** Name of the opted-in consortium member that vouched for the credential, if any. */
+  consortiumIssuer?: string
+  /** True when the issuing institution has not yet joined the consortium. */
+  awaitingIssuerOptIn?: boolean
   summary: string
   scannedSources: string[]
   completedAt: string

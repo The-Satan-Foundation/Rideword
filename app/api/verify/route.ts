@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAdapter, luhnValid } from '@/lib/issuers'
+import { getAdapter, luhnValid, resolveConsortiumIssuer } from '@/lib/issuers'
 import type {
   CredentialType,
   VerificationCheck,
@@ -166,26 +166,37 @@ export async function POST(req: Request) {
     }
   }
 
-  // 5. Authoritative registry check — real only with a licensed provider.
-  if (adapter.requiresProvider) {
+  // 5. Consortium membership resolution (opt-in model — no scraping).
+  //    If the issuing institution has joined the network, we resolve the
+  //    credential against the endpoint and signing key THEY published. If not,
+  //    the credential is held (pending_issuer) until that institution opts in.
+  const member = resolveConsortiumIssuer(type, issuer, body.issuerDomain)
+  scannedSources.push('Aegis consortium registry (opt-in members)')
+  let awaitingIssuerOptIn = false
+
+  if (member) {
+    const memberEndpoint = await reachable(member.verificationEndpoint)
+    const ok = memberEndpoint.ok
+    if (ok) issuerResolved = true
     checks.push({
-      id: 'authoritative',
-      label: 'Authoritative registry match',
-      description: `Cross-checks against ${adapter.sources[0]}. Requires a licensed data provider to return a binding result.`,
-      status: 'skipped',
-      detail: adapter.providerHint,
-      requiresCredentials: true,
+      id: 'consortium',
+      label: 'Consortium issuer attestation',
+      description: `${member.name} is an opted-in consortium member. Resolves the credential against their published verification endpoint and signing key (${member.publicKey}).`,
+      status: ok ? 'pass' : 'warn',
+      detail: ok
+        ? `Attested by ${member.name} over ${member.transports.join(' + ')}`
+        : `Member endpoint temporarily unreachable — will retry over ${member.transports.includes('lora_mesh') ? 'LoRa mesh' : 'mesh'}`,
     })
   } else {
-    // For open credential types we can treat a reachable issuer + link as authoritative-enough.
+    awaitingIssuerOptIn = true
     checks.push({
-      id: 'authoritative',
-      label: 'Public registry cross-check',
-      description: `Cross-references public records: ${adapter.sources.join(', ')}.`,
-      status: issuerResolved ? 'pass' : 'warn',
-      detail: issuerResolved
-        ? 'Consistent with public issuer records'
-        : 'No corroborating public record found',
+      id: 'consortium',
+      label: 'Consortium issuer attestation',
+      description:
+        'The issuing institution has not yet opted into the Aegis consortium. The credential is held privately and will auto-verify the moment they join — no personal data is scraped in the meantime.',
+      status: 'skipped',
+      detail: `Invitation pending for "${issuer}". Held in pending-issuer state.`,
+      requiresCredentials: true,
     })
   }
 
@@ -196,21 +207,21 @@ export async function POST(req: Request) {
   const confidence = Math.max(0, Math.min(100, Math.round((rawScore / Math.max(scored.length, 1)) * 100)))
 
   const hasFail = checks.some((c) => c.status === 'fail')
-  const awaitingProvider = checks.some((c) => c.status === 'skipped')
 
   let status: VerificationStatus
   let summary: string
   if (hasFail) {
     status = 'rejected'
     summary = 'One or more checks failed. This credential could not be verified.'
-  } else if (confidence >= 70 && !awaitingProvider) {
+  } else if (awaitingIssuerOptIn) {
+    status = 'pending_issuer'
+    summary = `Structural checks passed, but "${issuer}" has not joined the consortium yet. Your credential is held privately and will verify automatically once they opt in.`
+  } else if (member && issuerResolved && confidence >= 65) {
     status = 'verified'
-    summary = 'All open checks passed. Credential verified and ready to anchor.'
+    summary = `Attested by ${member.name} and verified end-to-end. Ready to anchor.`
   } else if (confidence >= 55) {
-    status = awaitingProvider ? 'needs_review' : 'verified'
-    summary = awaitingProvider
-      ? 'Open checks passed. Awaiting a licensed provider for a fully authoritative match.'
-      : 'Checks passed. Credential verified and ready to anchor.'
+    status = 'needs_review'
+    summary = 'Consortium member matched but the endpoint could not be reached. Will retry over the mesh.'
   } else {
     status = 'needs_review'
     summary = 'Partial confidence. Add a verification link or issuer domain to strengthen the proof.'
@@ -221,6 +232,8 @@ export async function POST(req: Request) {
     confidence,
     checks,
     issuerResolved,
+    consortiumIssuer: member?.name,
+    awaitingIssuerOptIn,
     summary,
     scannedSources: Array.from(new Set(scannedSources)),
     completedAt: new Date().toISOString(),

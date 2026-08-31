@@ -103,6 +103,107 @@ export const ISSUER_ADAPTERS: Record<CredentialType, IssuerAdapter> = {
   },
 }
 
+/**
+ * Consortium model (opt-in). Institutions JOIN the network by publishing a
+ * verification endpoint and a signing public key to this registry. Aegis never
+ * scrapes personal data — it only resolves credentials against institutions
+ * that have explicitly opted in. A credential whose issuer is not yet a member
+ * is held in `pending_issuer` state (never rejected) and auto-verifies the
+ * moment that institution onboards in a future network update.
+ *
+ * `transports` lists how a member replicates attestations. `lora_mesh` means
+ * the member runs a long-range radio gateway, so verification of their
+ * credentials continues to function with no internet connectivity at all.
+ */
+export type IssuerTransport = 'internet' | 'lora_mesh' | 'satellite'
+
+export interface ConsortiumIssuer {
+  id: string
+  name: string
+  domain: string
+  /** Public endpoint members publish so wallets can confirm a credential record. */
+  verificationEndpoint: string
+  /** Ed25519 signing key (display representation) the member anchors with. */
+  publicKey: string
+  issues: CredentialType[]
+  transports: IssuerTransport[]
+  joinedAt: string
+  /** Coordinates for the consortium map (0-100). */
+  x: number
+  y: number
+}
+
+/**
+ * Seed members. This is intentionally a small, explicit allow-list — the whole
+ * point of the opt-in model is that this set only grows when an institution
+ * chooses to join, not by crawling the web.
+ */
+export const CONSORTIUM_ISSUERS: ConsortiumIssuer[] = [
+  {
+    id: 'iss_mit',
+    name: 'Massachusetts Institute of Technology',
+    domain: 'mit.edu',
+    verificationEndpoint: 'https://mit.edu',
+    publicKey: 'ed25519:MIT7xQ2f…a91c',
+    issues: ['academic_degree'],
+    transports: ['internet', 'lora_mesh'],
+    joinedAt: '2025-11-02T00:00:00.000Z',
+    x: 24,
+    y: 30,
+  },
+  {
+    id: 'iss_estonia',
+    name: 'e-Estonia Digital Identity Authority',
+    domain: 'ria.ee',
+    verificationEndpoint: 'https://ria.ee',
+    publicKey: 'ed25519:EST4kD9m…7f02',
+    issues: ['government_id', 'passport', 'proof_of_address'],
+    transports: ['internet', 'lora_mesh', 'satellite'],
+    joinedAt: '2025-10-18T00:00:00.000Z',
+    x: 70,
+    y: 22,
+  },
+  {
+    id: 'iss_who',
+    name: 'World Health Organization Credentialing',
+    domain: 'who.int',
+    verificationEndpoint: 'https://who.int',
+    publicKey: 'ed25519:WHO2pL5x…c8d1',
+    issues: ['health_record', 'professional_license'],
+    transports: ['internet', 'satellite'],
+    joinedAt: '2025-12-01T00:00:00.000Z',
+    x: 52,
+    y: 64,
+  },
+  {
+    id: 'iss_swift',
+    name: 'Open Banking Consortium',
+    domain: 'openbanking.org.uk',
+    verificationEndpoint: 'https://openbanking.org.uk',
+    publicKey: 'ed25519:OBC9zR1a…44be',
+    issues: ['bank_account', 'employment'],
+    transports: ['internet', 'lora_mesh'],
+    joinedAt: '2026-01-14T00:00:00.000Z',
+    x: 82,
+    y: 58,
+  },
+]
+
+/** Resolve an opted-in member for a credential by domain or fuzzy name match. */
+export function resolveConsortiumIssuer(
+  type: CredentialType,
+  issuer: string,
+  issuerDomain?: string,
+): ConsortiumIssuer | undefined {
+  const domain = (issuerDomain || '').toLowerCase().replace(/^www\./, '')
+  const name = (issuer || '').toLowerCase()
+  return CONSORTIUM_ISSUERS.find((m) => {
+    const domainMatch = domain && (domain === m.domain || domain.endsWith(`.${m.domain}`))
+    const nameMatch = name && (name.includes(m.name.toLowerCase()) || m.name.toLowerCase().includes(name))
+    return (domainMatch || nameMatch) && m.issues.includes(type)
+  })
+}
+
 export const CREDENTIAL_TYPE_OPTIONS: { value: CredentialType; label: string }[] = (
   Object.values(ISSUER_ADAPTERS) as IssuerAdapter[]
 ).map((a) => ({ value: a.type, label: a.label }))

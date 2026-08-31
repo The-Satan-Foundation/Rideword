@@ -77,13 +77,11 @@ export default function LandingPage() {
             <a href="#verify" className="transition hover:text-foreground">Verification</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard">Enter app</Link>
+            <Button render={<Link href="/dashboard" />} nativeButton={false} variant="ghost" size="sm">
+              Enter app
             </Button>
-            <Button asChild size="sm">
-              <Link href="/onboarding">
-                Create identity <ArrowRight className="size-4" />
-              </Link>
+            <Button render={<Link href="/onboarding" />} nativeButton={false} size="sm">
+              Create identity <ArrowRight className="size-4" />
             </Button>
           </div>
         </div>
@@ -101,17 +99,15 @@ export default function LandingPage() {
           </h1>
           <p className="mt-6 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground">
             Aegis is a blockchain-backed digital ID, wallet and passport. Upload a
-            credential, we verify it against the real issuer, then anchor it to a
-            peer-to-peer mesh with zero-knowledge proofs.
+            credential, we verify it against opted-in issuers, then anchor it to a
+            peer-to-peer LoRa mesh with zero-knowledge proofs — no internet required.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button asChild size="lg">
-              <Link href="/onboarding">
-                Create your identity <ArrowRight className="size-4" />
-              </Link>
+            <Button render={<Link href="/onboarding" />} nativeButton={false} size="lg">
+              Create your identity <ArrowRight className="size-4" />
             </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="#how">See how it works</Link>
+            <Button render={<Link href="#how" />} nativeButton={false} variant="outline" size="lg">
+              See how it works
             </Button>
           </div>
           <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-border pt-6">
@@ -238,10 +234,8 @@ export default function LandingPage() {
             the vault.
           </p>
           <div className="mt-8 flex justify-center">
-            <Button asChild size="lg">
-              <Link href="/onboarding">
-                Create your identity <ArrowRight className="size-4" />
-              </Link>
+            <Button render={<Link href="/onboarding" />} nativeButton={false} size="lg">
+              Create your identity <ArrowRight className="size-4" />
             </Button>
           </div>
         </div>
