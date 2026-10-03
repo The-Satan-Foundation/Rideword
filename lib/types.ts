@@ -112,3 +112,62 @@ export interface WalletAsset {
   fiatValue: number
   kind: 'identity_token' | 'stablecoin' | 'reputation'
 }
+
+export type IncidentStatus = 'reported' | 'independently_verified' | 'maintenance' | 'resolved'
+export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical'
+
+export interface SensorReading {
+  metric: string
+  value: string
+  unit: string
+  observedAt: string
+  sourceLabel: string
+  hash: string
+}
+
+export interface IncidentAttestation {
+  id: string
+  incidentId: string
+  kind: 'report' | 'independent_verification' | 'status_change'
+  actorDid: string
+  actorName: string
+  credentialTitle: string
+  credentialId: string
+  note: string
+  createdAt: string
+  evidenceHash: string
+}
+
+export interface InfrastructureIncident {
+  id: string
+  title: string
+  facility: string
+  asset: string
+  description: string
+  status: IncidentStatus
+  severity: IncidentSeverity
+  reportedAt: string
+  updatedAt: string
+  reporterDid: string
+  reporterName: string
+  reporterCredentialId: string
+  reporterCredentialTitle: string
+  readings: SensorReading[]
+  attestations: IncidentAttestation[]
+  public: boolean
+}
+
+export interface IncidentInput {
+  title: string
+  facility: string
+  asset: string
+  description: string
+  severity: IncidentSeverity
+  readings: SensorReading[]
+}
+
+export interface IncidentVerificationInput {
+  incidentId: string
+  note: string
+  status: 'independently_verified' | 'maintenance' | 'resolved'
+}

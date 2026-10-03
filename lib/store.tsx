@@ -33,6 +33,10 @@ import type {
   Credential,
   CredentialType,
   Identity,
+  IncidentAttestation,
+  IncidentInput,
+  IncidentVerificationInput,
+  InfrastructureIncident,
   LedgerBlock,
   MeshNode,
   VerificationResult,
@@ -46,6 +50,7 @@ interface AegisState {
   credentials: Credential[]
   blocks: LedgerBlock[]
   nodes: MeshNode[]
+  incidents: InfrastructureIncident[]
 }
 
 interface NewCredentialInput {
@@ -67,6 +72,8 @@ interface AegisContextValue extends AegisState {
   addCredential: (input: NewCredentialInput) => Promise<Credential>
   anchorCredential: (credentialId: string) => Promise<void>
   removeCredential: (credentialId: string) => void
+  reportIncident: (input: IncidentInput) => Promise<InfrastructureIncident>
+  verifyIncident: (input: IncidentVerificationInput) => Promise<InfrastructureIncident>
   resetAll: () => void
   wallet: WalletAsset[]
 }
@@ -119,7 +126,14 @@ function loadState(): AegisState | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    return JSON.parse(raw) as AegisState
+    const parsed = JSON.parse(raw) as Partial<AegisState>
+    return {
+      identity: parsed.identity ?? null,
+      credentials: parsed.credentials ?? [],
+      blocks: parsed.blocks ?? [],
+      nodes: parsed.nodes ?? [],
+      incidents: parsed.incidents ?? [],
+    }
   } catch {
     return null
   }
@@ -140,6 +154,7 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
     credentials: [],
     blocks: [],
     nodes: [],
+    incidents: [],
   })
   const [ready, setReady] = useState(false)
   const stateRef = useRef(state)
@@ -166,12 +181,12 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
       stateRef.current = loaded
       setStateRaw(loaded)
     }
-    persist.current = true
+    skipNextPersist.current = false
     setReady(true)
   }, [])
 
   useEffect(() => {
-    if (persist.current) saveState(state)
+    if (!skipNextPersist.current) saveState(state)
   }, [state])
 
   const createIdentity = useCallback(
@@ -208,6 +223,7 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
         credentials: [],
         blocks: [genesis],
         nodes: generateNodes(did),
+        incidents: [],
       })
       return identity
     },
@@ -339,6 +355,85 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
     [anchorCredentialInternal],
   )
 
+  const reportIncident = useCallback(
+    async (input: IncidentInput) => {
+      const current = stateRef.current
+      const identity = current.identity
+      if (!identity) throw new Error('Create an Aegis identity first.')
+      const credential = current.credentials.find(
+        (c) => c.status === 'verified' && c.type === 'professional_license' && /water|treatment|operator/i.test(`${c.title} ${c.issuer}`),
+      )
+      if (!credential) throw new Error('A verified water-treatment credential is required to report this incident.')
+
+      const now = new Date().toISOString()
+      const id = `incident_${randomHex(8)}`
+      const evidenceHash = await sha256Hex(JSON.stringify({ id, input, reporter: identity.did }))
+      const attestation: IncidentAttestation = {
+        id: `att_${randomHex(8)}`,
+        incidentId: id,
+        kind: 'report',
+        actorDid: identity.did,
+        actorName: identity.displayName,
+        credentialTitle: credential.title,
+        credentialId: credential.id,
+        note: input.description,
+        createdAt: now,
+        evidenceHash,
+      }
+      const incident: InfrastructureIncident = {
+        ...input,
+        id,
+        status: 'reported',
+        reportedAt: now,
+        updatedAt: now,
+        reporterDid: identity.did,
+        reporterName: identity.displayName,
+        reporterCredentialId: credential.id,
+        reporterCredentialTitle: credential.title,
+        attestations: [attestation],
+        public: true,
+      }
+      setState((s) => ({ ...s, incidents: [incident, ...s.incidents] }))
+      return incident
+    },
+    [setState],
+  )
+
+  const verifyIncident = useCallback(
+    async (input: IncidentVerificationInput) => {
+      const current = stateRef.current
+      const identity = current.identity
+      if (!identity) throw new Error('Create an Aegis identity first.')
+      const credential = current.credentials.find(
+        (c) => c.status === 'verified' && c.type === 'professional_license' && /water|treatment|operator/i.test(`${c.title} ${c.issuer}`),
+      )
+      if (!credential) throw new Error('A verified water-treatment credential is required to attest to this incident.')
+      const incident = current.incidents.find((item) => item.id === input.incidentId)
+      if (!incident) throw new Error('Incident not found.')
+      if (incident.attestations.some((a) => a.actorDid === identity.did && a.kind === 'independent_verification')) {
+        throw new Error('You have already independently verified this incident.')
+      }
+      const now = new Date().toISOString()
+      const evidenceHash = await sha256Hex(JSON.stringify({ incident, input, verifier: identity.did }))
+      const attestation: IncidentAttestation = {
+        id: `att_${randomHex(8)}`,
+        incidentId: incident.id,
+        kind: 'independent_verification',
+        actorDid: identity.did,
+        actorName: identity.displayName,
+        credentialTitle: credential.title,
+        credentialId: credential.id,
+        note: input.note,
+        createdAt: now,
+        evidenceHash,
+      }
+      const updated = { ...incident, status: input.status, updatedAt: now, attestations: [...incident.attestations, attestation] }
+      setState((s) => ({ ...s, incidents: s.incidents.map((item) => (item.id === incident.id ? updated : item)) }))
+      return updated
+    },
+    [setState],
+  )
+
   const removeCredential = useCallback(
     (credentialId: string) => {
       setState((s) => ({ ...s, credentials: s.credentials.filter((c) => c.id !== credentialId) }))
@@ -347,7 +442,7 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
   )
 
   const resetAll = useCallback(() => {
-    setState({ identity: null, credentials: [], blocks: [], nodes: [] })
+    setState({ identity: null, credentials: [], blocks: [], nodes: [], incidents: [] })
   }, [setState])
 
   const wallet = useMemo<WalletAsset[]>(() => {
@@ -388,6 +483,8 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
     addCredential,
     anchorCredential,
     removeCredential,
+    reportIncident,
+    verifyIncident,
     resetAll,
     wallet,
   }
