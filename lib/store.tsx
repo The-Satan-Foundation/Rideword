@@ -30,6 +30,7 @@ import {
   sha256Hex,
 } from './crypto'
 import type {
+  CompanionAccessEvent,
   Credential,
   CredentialType,
   Identity,
@@ -74,6 +75,7 @@ interface AegisContextValue extends AegisState {
   removeCredential: (credentialId: string) => void
   reportIncident: (input: IncidentInput) => Promise<InfrastructureIncident>
   verifyIncident: (input: IncidentVerificationInput) => Promise<InfrastructureIncident>
+  requestCompanionAccess: (input: { requesterName: string; requesterCredential: string; requestedTopic: string }) => Promise<CompanionAccessEvent>
   resetAll: () => void
   wallet: WalletAsset[]
 }
@@ -186,14 +188,24 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (!skipNextPersist.current) saveState(state)
-  }, [state])
+    if (ready && !skipNextPersist.current) saveState(state)
+  }, [ready, state])
 
   const createIdentity = useCallback(
     async (displayName: string, handle: string) => {
       const { publicKey } = generateKeyMaterial()
       const address = await deriveAddress(publicKey)
       const did = makeDid(handle)
+      const companionSeed = await sha256Hex(`${did}|${publicKey}|aegis-companion`)
+      const companion: Identity['companion'] = {
+        id: `companion_${companionSeed.slice(0, 16)}`,
+        name: `${displayName.split(' ')[0] || 'Identity'} / Sentinel`,
+        instanceSeed: companionSeed,
+        pairedDid: did,
+        pairedAt: new Date().toISOString(),
+        capabilities: ['Credential-gated data requests', 'Access attempt monitoring', 'Mesh handshake verification'],
+        accessLog: [],
+      }
       const identity: Identity = {
         did,
         displayName,
@@ -203,6 +215,7 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
         address,
         createdAt: new Date().toISOString(),
         trustScore: 40,
+        companion,
       }
 
       const genesisPayload = `genesis|${did}|${address}`
@@ -434,6 +447,41 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
     [setState],
   )
 
+  const requestCompanionAccess = useCallback(
+    async (input: { requesterName: string; requesterCredential: string; requestedTopic: string }) => {
+      const current = stateRef.current
+      if (!current.identity?.companion) throw new Error('Pair an Aegis companion first.')
+      const credential = input.requesterCredential.toLowerCase()
+      const topic = input.requestedTopic.toLowerCase()
+      const isClinical = /allerg|medication|medical|health|blood|drug/.test(topic)
+      const isClinician = /doctor|nurse|paramedic|clinician|physician|medical/.test(credential)
+      const decision = isClinical && isClinician ? 'resolved' : 'denied'
+      const reason = decision === 'resolved'
+        ? 'Requester credential matches the clinical nature of this answer. The companion resolved the minimum necessary response.'
+        : 'Credential scope does not match this protected topic. No personal health data was disclosed.'
+      const now = new Date().toISOString()
+      const handshakeHash = await sha256Hex(`${current.identity.companion.instanceSeed}|${input.requesterName}|${input.requestedTopic}|${decision}|${now}`)
+      const event: CompanionAccessEvent = {
+        id: `access_${randomHex(8)}`,
+        requesterName: input.requesterName,
+        requesterCredential: input.requesterCredential,
+        requestedTopic: input.requestedTopic,
+        decision,
+        reason,
+        createdAt: now,
+        handshakeHash,
+      }
+      setState((s) => ({
+        ...s,
+        identity: s.identity?.companion
+          ? { ...s.identity, companion: { ...s.identity.companion, accessLog: [event, ...s.identity.companion.accessLog] } }
+          : s.identity,
+      }))
+      return event
+    },
+    [setState],
+  )
+
   const removeCredential = useCallback(
     (credentialId: string) => {
       setState((s) => ({ ...s, credentials: s.credentials.filter((c) => c.id !== credentialId) }))
@@ -485,6 +533,7 @@ export function AegisProvider({ children }: { children: React.ReactNode }) {
     removeCredential,
     reportIncident,
     verifyIncident,
+    requestCompanionAccess,
     resetAll,
     wallet,
   }

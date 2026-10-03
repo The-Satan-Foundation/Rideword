@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { AlertTriangle, Boxes, LayoutGrid, Network, ScanFace, Wallet } from 'lucide-react'
+import { AlertTriangle, Boxes, Bot, LayoutGrid, Network, ScanFace, Wallet } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +10,7 @@ const NAV = [
   { href: '/dashboard', label: 'Overview', Icon: LayoutGrid },
   { href: '/dashboard/credentials', label: 'Credentials', Icon: ScanFace },
   { href: '/dashboard/incidents', label: 'Field incidents', Icon: AlertTriangle },
+  { href: '/dashboard/companion', label: 'AI companion', Icon: Bot },
   { href: '/dashboard/wallet', label: 'Wallet', Icon: Wallet },
   { href: '/dashboard/ledger', label: 'Ledger', Icon: Boxes },
   { href: '/dashboard/network', label: 'Mesh network', Icon: Network },

@@ -66,6 +66,29 @@ export interface Credential {
   createdAt: string
 }
 
+export type CompanionAccessDecision = 'resolved' | 'denied' | 'needs_consent'
+
+export interface AegisCompanion {
+  id: string
+  name: string
+  instanceSeed: string
+  pairedDid: string
+  pairedAt: string
+  capabilities: string[]
+  accessLog: CompanionAccessEvent[]
+}
+
+export interface CompanionAccessEvent {
+  id: string
+  requesterName: string
+  requesterCredential: string
+  requestedTopic: string
+  decision: CompanionAccessDecision
+  reason: string
+  createdAt: string
+  handshakeHash: string
+}
+
 export interface Identity {
   did: string // decentralized identifier
   displayName: string
@@ -75,6 +98,7 @@ export interface Identity {
   address: string // wallet address
   createdAt: string
   trustScore: number
+  companion?: AegisCompanion
 }
 
 export interface LedgerBlock {
