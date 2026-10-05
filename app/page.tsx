@@ -158,7 +158,7 @@ export default function LandingPage() {
           <div className="max-w-2xl">
             <p className="font-mono text-xs uppercase tracking-[0.25em] text-primary">Architecture</p>
             <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-              Four layers, one sovereign vault
+              Four layers, one Impenetrable  vault
             </h2>
           </div>
           <div className="mt-12 grid gap-4 md:grid-cols-2">
