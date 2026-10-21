@@ -1,0 +1,13 @@
+{
+  "name": "aegis-tanmatsu-firmware",
+  "target": "esp32s3",
+  "framework": "ESP-IDF",
+  "transport": "LoRa mesh with optional Wi-Fi/USB",
+  "security": {
+    "identity": "device-local seed in encrypted NVS",
+    "authorization": "least-privilege role and data-class policy",
+    "audit": "bounded append-only hash-chained event window",
+    "network": "untrusted frames denied until signature/schema validation"
+  },
+  "status": "hardware-driver scaffold"
+}

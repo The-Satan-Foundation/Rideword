@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAdapter, luhnValid, resolveConsortiumIssuer } from '@/lib/issuers'
+import { lookupIssuerWithOsiris } from '@/lib/osiris'
 import type {
   CredentialType,
   VerificationCheck,
@@ -136,6 +137,20 @@ export async function POST(req: Request) {
       description: 'Attempts to resolve the issuing authority from a domain.',
       status: 'warn',
       detail: 'No resolvable issuer domain provided',
+    })
+  }
+
+  // 3b. Optional Osiris context. This is issuer-only, read-only intelligence;
+  // it never receives subject data and never upgrades a credential by itself.
+  if (domain) {
+    scannedSources.push('Osiris issuer-domain intelligence')
+    const osiris = await lookupIssuerWithOsiris(domain)
+    checks.push({
+      id: 'osiris_context',
+      label: 'Osiris issuer context',
+      description: 'Checks issuer-domain context through the connected read-only Osiris intelligence service.',
+      status: osiris.available ? 'pass' : 'warn',
+      detail: osiris.detail,
     })
   }
 
