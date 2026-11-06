@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Aegis — Self-Sovereign Digital Identity',
+  title: 'Grimoir — The Satan Foundation Mesh',
   description:
-    'A blockchain-backed digital ID, wallet and passport secured by a peer-to-peer mesh and zero-knowledge proofs. Own your credentials, prove anything, reveal nothing.',
+    'A sovereign identity, wallet and mesh communications console for The Satan Foundation. Own your credentials, speak privately, reveal nothing unnecessary.',
   generator: 'v0.app',
 }
 
