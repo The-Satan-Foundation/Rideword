@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { LogOut, RefreshCw } from 'lucide-react'
+import { LogOut, MessageSquare, RefreshCw, Users } from 'lucide-react'
 import {
   Avatar,
   AvatarFallback,
@@ -61,6 +62,13 @@ export function Topbar() {
             <div className="px-2 py-1.5">
               <HashChip label="DID" value={identity.did} className="w-full" />
             </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/messages"><MessageSquare className="size-4" /> Node messages</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/network"><Users className="size-4" /> Contacts & mesh</Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.refresh()}>
               <RefreshCw className="size-4" /> Refresh

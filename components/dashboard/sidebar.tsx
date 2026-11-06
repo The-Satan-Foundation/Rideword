@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { AlertTriangle, Boxes, Bot, LayoutGrid, Network, ScanFace, Wallet } from 'lucide-react'
+import { AlertTriangle, Boxes, Bot, LayoutGrid, MessageSquare, Network, ScanFace, Wallet } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
@@ -14,6 +14,7 @@ const NAV = [
   { href: '/dashboard/wallet', label: 'Wallet', Icon: Wallet },
   { href: '/dashboard/ledger', label: 'Ledger', Icon: Boxes },
   { href: '/dashboard/network', label: 'Mesh network', Icon: Network },
+  { href: '/dashboard/messages', label: 'Node messages', Icon: MessageSquare },
 ]
 
 export function Sidebar() {
