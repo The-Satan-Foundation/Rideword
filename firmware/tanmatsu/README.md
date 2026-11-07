@@ -45,4 +45,4 @@ Document trust is advisory and entirely on-device. The demo compares locally sup
 
 ## Build caveat
 
-The repository does not vendor the proprietary/device-specific Tanmatsu BSP. The official template must provide the matching `pax_code` component, display initialization, framebuffer flush, and keyboard adapter. The application-level state and rendering code lives in `main/main.c`; wire those template APIs in before claiming a hardware-tested image.
+The repository does not vendor the proprietary/device-specific Tanmatsu BSP. The official template must provide the matching `pax_code` component, display initialization, framebuffer flush, and keyboard adapter. The application-level state and rendering code lives in `main/main.cpp`; wire those template APIs in before claiming a hardware-tested image. The repository-level `firmware/build.sh` packages the bootloader, partition table, and application into `firmware/dist/grimoir-esp32p4.bin` once ESP-IDF and the matching BSP are installed.
