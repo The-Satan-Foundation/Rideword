@@ -2,14 +2,15 @@
 
 import dynamic from 'next/dynamic'
 import { useMemo, useState } from 'react'
-import useSWR from 'swr'
-import { AlertCircle, Check, Compass, Globe2, LocateFixed, LogOut, MapPin, Plus, Radio, ShieldCheck } from 'lucide-react'
+import useSWR, { useSWRConfig } from 'swr'
+import { AlertCircle, Compass, Globe2, LocateFixed, LogOut, MapPin, Plus, Radio, ShieldCheck } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { QuestAuthPanel } from '@/components/dashboard/quest-auth-panel'
 import { QuestForm } from '@/components/dashboard/quest-form'
+import { QuestPaymentPanel } from '@/components/dashboard/quest-payment-panel'
 import { createClient } from '@/lib/supabase/client'
 import { CREDENTIAL_LABELS, type Quest, type QuestPayload, type QuestPoint } from '@/lib/quests'
 
@@ -35,6 +36,7 @@ export function QuestBoard() {
     refreshInterval: 30_000,
     revalidateOnFocus: true,
   })
+  const { mutate: mutateCache } = useSWRConfig()
   const [view, setView] = useState<'local' | 'global'>('global')
   const [localCenter, setLocalCenter] = useState<QuestPoint | null>(null)
   const [mapCenter, setMapCenter] = useState<QuestPoint & { zoom: number }>({ latitude: 20, longitude: 0, zoom: 1.4 })
@@ -43,6 +45,7 @@ export function QuestBoard() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [isSigningOut, setIsSigningOut] = useState(false)
+  const [isClaiming, setIsClaiming] = useState(false)
 
   const quests = data?.quests ?? []
   const user = data?.user ?? null
@@ -64,11 +67,15 @@ export function QuestBoard() {
     })
     const result = await response.json()
     if (!response.ok) throw new Error(result.error ?? 'Could not publish this quest.')
-    await mutate()
-    setSelectedId(result.quest.id)
     setShowCreate(false)
     setDraftPoint(null)
-    setNotice('Quest published to the public map.')
+    if (result.checkoutUrl) {
+      setNotice('Quest saved as pending. Redirecting to secure Stripe Checkout…')
+      window.location.assign(result.checkoutUrl)
+      return
+    }
+    await mutate()
+    setNotice(result.alreadyPaid ? 'Payment is confirmed. The quest will appear after Stripe verifies the payment.' : 'Payment is processing. The quest will appear after Stripe confirms it.')
   }
 
   function setCurrentLocation() {
@@ -109,6 +116,24 @@ export function QuestBoard() {
     setNotice('Signed out. Open quests remain publicly visible.')
   }
 
+  async function claimQuest() {
+    if (!selectedQuest) return
+    setIsClaiming(true)
+    setNotice(null)
+    try {
+      const response = await fetch(`/api/quests/${selectedQuest.id}/claim`, { method: 'POST' })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error ?? 'Could not claim this quest.')
+      await Promise.all([mutate(), mutateCache('/api/quests/mine')])
+      setSelectedId(null)
+      setNotice('Quest claimed. Complete the work and submit a report from My quests & work.')
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : 'Could not claim this quest.')
+    } finally {
+      setIsClaiming(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -117,7 +142,7 @@ export function QuestBoard() {
             <Compass className="size-3.5" aria-hidden="true" /> Field quest network
           </div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">Quests & bounties</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Browse public field work by location, credential minimum, and bounty offer. Open quests sync from the Aegis database.</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Browse funded USD field work by location and credential request. New quests appear publicly only after Stripe confirms payment.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ToggleGroup
@@ -167,6 +192,7 @@ export function QuestBoard() {
       {!user && <div id="quest-account"><QuestAuthPanel onAuthenticated={() => { void mutate(); setNotice('Signed in. You can now publish a quest.') }} /></div>}
 
       {showCreate && user && <QuestForm point={draftPoint} onPointChange={setDraftPoint} onCancel={() => { setShowCreate(false); setDraftPoint(null) }} onSubmit={publishQuest} />}
+      {user && <QuestPaymentPanel userId={user.id} />}
 
       {notice && <p role="status" className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">{notice}</p>}
       {error && <p role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"><AlertCircle className="size-4" aria-hidden="true" />{error.message}</p>}
@@ -195,7 +221,17 @@ export function QuestBoard() {
           <Card className="min-h-40">
             <CardHeader className="pb-2"><CardTitle className="text-sm">Selected quest</CardTitle></CardHeader>
             <CardContent>
-              {selectedQuest ? <QuestSummary quest={selectedQuest} /> : <p className="py-5 text-sm text-muted-foreground">Select a map pin or quest below to inspect the public details.</p>}
+              {selectedQuest ? (
+                <>
+                  <QuestSummary quest={selectedQuest} />
+                  {user && !selectedQuest.is_author && selectedQuest.funding_status === 'funded' && (
+                    <Button className="mt-4 w-full" onClick={() => void claimQuest()} disabled={isClaiming}>
+                      {isClaiming ? 'Claiming…' : 'Claim funded quest'}
+                    </Button>
+                  )}
+                  {selectedQuest.funding_status !== 'funded' && <p className="mt-4 text-xs text-muted-foreground">This listing has no verified Stripe funding and cannot be claimed in this workflow.</p>}
+                </>
+              ) : <p className="py-5 text-sm text-muted-foreground">Select a map pin or quest below to inspect the public details.</p>}
             </CardContent>
           </Card>
           <Card className="min-h-64 overflow-hidden">
@@ -218,7 +254,7 @@ export function QuestBoard() {
             </CardContent>
           </Card>
           <Card className="border-accent/20 bg-accent/[0.035] p-4">
-            <div className="flex gap-3"><Radio className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><div><p className="text-sm font-medium">Credential minimums are requests</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">This release stores the requested credential level on each quest. It does not yet verify eligibility to claim work or execute SOL/USD payouts.</p></div></div>
+            <div className="flex gap-3"><Radio className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" /><div><p className="text-sm font-medium">Credential minimums are requests</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Credential minimums are requests, not verified eligibility checks in this release. USD bounties are funded through Stripe Checkout and paid to a claimant’s connected Stripe account only after the quest author approves submitted work.</p></div></div>
           </Card>
         </aside>
       </div>
@@ -239,6 +275,7 @@ function QuestSummary({ quest }: { quest: Quest }) {
       <div className="mt-4 flex flex-wrap gap-2">
         <Badge variant="secondary">Min: {CREDENTIAL_LABELS[quest.credential_minimum]}</Badge>
         <Badge variant="outline" className="border-accent/30 text-accent">{formatReward(quest)}</Badge>
+        {quest.funding_status === 'funded' && <Badge variant="outline" className="border-success/30 text-success">FUNDED</Badge>}
       </div>
       <p className="mt-3 font-mono text-[10px] text-muted-foreground">{new Date(quest.created_at).toLocaleString()}</p>
     </div>

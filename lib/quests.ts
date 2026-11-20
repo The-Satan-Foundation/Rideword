@@ -20,7 +20,9 @@ export interface Quest {
   credential_minimum: QuestCredential
   reward_amount: number | string
   reward_currency: QuestCurrency
-  status: 'open' | 'in_progress' | 'completed' | 'cancelled'
+  status: 'pending_payment' | 'open' | 'in_progress' | 'completed' | 'cancelled'
+  is_author?: boolean
+  funding_status?: 'checkout_pending' | 'funded' | 'paid' | null
 }
 
 export interface QuestPoint {
@@ -38,7 +40,7 @@ export interface QuestPayload {
   radiusKm: number | null
   credentialMinimum: QuestCredential
   rewardAmount: number
-  rewardCurrency: QuestCurrency
+  rewardCurrency: 'USD'
 }
 
 export const CREDENTIAL_LABELS: Record<QuestCredential, string> = {

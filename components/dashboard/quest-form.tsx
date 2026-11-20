@@ -27,7 +27,6 @@ export function QuestForm({ point, onPointChange, onCancel, onSubmit }: QuestFor
   const [radiusKm, setRadiusKm] = useState(25)
   const [credentialMinimum, setCredentialMinimum] = useState('aegis_holder')
   const [rewardAmount, setRewardAmount] = useState('')
-  const [rewardCurrency, setRewardCurrency] = useState<'USD' | 'SOL'>('USD')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,11 +38,11 @@ export function QuestForm({ point, onPointChange, onCancel, onSubmit }: QuestFor
       return
     }
     const amount = Number(rewardAmount)
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setError('Enter a bounty amount greater than zero.')
+    if (!Number.isFinite(amount) || amount < 0.5 || amount > 999999.99) {
+      setError('Enter a USD bounty between $0.50 and $999,999.99.')
       return
     }
-    if (rewardCurrency === 'USD' && Math.round(amount * 100) !== amount * 100) {
+    if (Math.round(amount * 100) !== amount * 100) {
       setError('USD bounty amounts support up to two decimal places.')
       return
     }
@@ -60,7 +59,7 @@ export function QuestForm({ point, onPointChange, onCancel, onSubmit }: QuestFor
         radiusKm: scope === 'local' ? radiusKm : null,
         credentialMinimum: credentialMinimum as QuestPayload['credentialMinimum'],
         rewardAmount: amount,
-        rewardCurrency,
+        rewardCurrency: 'USD',
       })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not publish this quest.')
@@ -88,7 +87,7 @@ export function QuestForm({ point, onPointChange, onCancel, onSubmit }: QuestFor
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="text-base">Post a field quest</CardTitle>
-            <CardDescription className="mt-1">Set the pin, response requirements, and a bounty offer. No payment is processed here.</CardDescription>
+            <CardDescription className="mt-1">Set the pin and response requirements, then fund the USD bounty through Stripe Checkout before it appears publicly.</CardDescription>
           </div>
           <Radio className="size-5 text-primary" aria-hidden="true" />
         </div>
@@ -148,15 +147,12 @@ export function QuestForm({ point, onPointChange, onCancel, onSubmit }: QuestFor
               <FieldDescription>This records the requested minimum; credential enforcement for claiming quests is not part of this release.</FieldDescription>
             </Field>
             <Field>
-              <FieldLabel htmlFor="quest-reward">Bounty offer</FieldLabel>
+              <FieldLabel htmlFor="quest-reward">USD bounty</FieldLabel>
               <div className="flex gap-2">
-                <Input id="quest-reward" required type="number" min="0.000000001" step={rewardCurrency === 'USD' ? '0.01' : '0.000000001'} inputMode="decimal" value={rewardAmount} onChange={(event) => setRewardAmount(event.target.value)} placeholder="0.00" />
-                <NativeSelect aria-label="Bounty currency" className="w-24 shrink-0" value={rewardCurrency} onChange={(event) => setRewardCurrency(event.target.value as 'USD' | 'SOL')}>
-                  <NativeSelectOption value="USD">USD</NativeSelectOption>
-                  <NativeSelectOption value="SOL">SOL</NativeSelectOption>
-                </NativeSelect>
+                <Input id="quest-reward" required type="number" min="0.50" max="999999.99" step="0.01" inputMode="decimal" value={rewardAmount} onChange={(event) => setRewardAmount(event.target.value)} placeholder="0.00" />
+                <div aria-hidden="true" className="grid h-8 w-20 shrink-0 place-items-center rounded-lg border border-input bg-secondary/30 text-sm">USD</div>
               </div>
-              <FieldDescription>Display only. No wallet transfer, escrow, or payment processing.</FieldDescription>
+              <FieldDescription>Funded at posting. Stripe processing fees are paid by the platform; payout is released after author approval.</FieldDescription>
             </Field>
             <FieldSet className="md:col-span-2">
               <FieldLegend variant="label">Geopin coordinates</FieldLegend>
@@ -176,7 +172,7 @@ export function QuestForm({ point, onPointChange, onCancel, onSubmit }: QuestFor
           {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-            <Button type="submit" disabled={busy}>{busy ? 'Publishing…' : 'Publish quest'}</Button>
+            <Button type="submit" disabled={busy}>{busy ? 'Starting Checkout…' : 'Fund & publish quest'}</Button>
           </div>
         </form>
       </CardContent>
