@@ -6,7 +6,9 @@ import { LogOut, MessageSquare, RefreshCw, Users } from 'lucide-react'
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
 } from '@/components/ui/avatar'
+import { useAppearance } from '@/lib/appearance'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -22,6 +24,7 @@ import { useAegis } from '@/lib/store'
 export function Topbar() {
   const router = useRouter()
   const { identity, resetAll } = useAegis()
+  const { settings } = useAppearance()
   if (!identity) return null
 
   const initials = identity.displayName
@@ -44,8 +47,9 @@ export function Topbar() {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-2 rounded-full border border-border bg-secondary/40 py-1 pl-1 pr-3 transition hover:border-primary/40">
-            <Avatar className="size-7">
-              <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
+          <Avatar className="size-7">
+            {settings.avatarDataUrl && <AvatarImage src={settings.avatarDataUrl} alt={`${identity.displayName} profile`} />}
+            <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
                 {initials}
               </AvatarFallback>
             </Avatar>
