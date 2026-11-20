@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { AlertTriangle, Boxes, Bot, LayoutGrid, MessageSquare, Network, ScanFace, Wallet } from 'lucide-react'
+import { AlertTriangle, Boxes, Bot, Compass, LayoutGrid, MessageSquare, Network, ScanFace, Wallet } from 'lucide-react'
 import { Logo } from '@/components/logo'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +10,7 @@ const NAV = [
   { href: '/dashboard', label: 'Overview', Icon: LayoutGrid },
   { href: '/dashboard/credentials', label: 'Credentials', Icon: ScanFace },
   { href: '/dashboard/incidents', label: 'Field incidents', Icon: AlertTriangle },
+  { href: '/dashboard/quests', label: 'Quests & bounties', Icon: Compass },
   { href: '/dashboard/companion', label: 'AI companion', Icon: Bot },
   { href: '/dashboard/wallet', label: 'Wallet', Icon: Wallet },
   { href: '/dashboard/ledger', label: 'Ledger', Icon: Boxes },
@@ -59,7 +60,7 @@ export function Sidebar() {
 export function MobileNav() {
   const pathname = usePathname()
   return (
-    <nav className="sticky bottom-0 z-40 flex items-center justify-around border-t border-border/60 bg-background/90 px-2 py-2 backdrop-blur-xl lg:hidden">
+    <nav aria-label="Mobile dashboard navigation" className="sticky bottom-0 z-40 flex w-full min-w-0 items-center justify-start gap-1 overflow-x-auto border-t border-border/60 bg-background/90 px-2 py-2 backdrop-blur-xl lg:hidden">
       {NAV.map(({ href, label, Icon }) => {
         const active = href === '/dashboard' ? pathname === href : pathname.startsWith(href)
         return (
@@ -67,7 +68,7 @@ export function MobileNav() {
             key={href}
             href={href}
             className={cn(
-              'flex flex-col items-center gap-1 rounded-md px-3 py-1.5 text-[10px] font-medium transition',
+              'flex shrink-0 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-[10px] font-medium transition',
               active ? 'text-primary' : 'text-muted-foreground',
             )}
           >
