@@ -63,11 +63,11 @@ export function Topbar() {
               <HashChip label="DID" value={identity.did} className="w-full" />
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/messages"><MessageSquare className="size-4" /> Node messages</Link>
+            <DropdownMenuItem render={<Link href="/dashboard/messages" />}>
+              <MessageSquare className="size-4" /> Node messages
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/network"><Users className="size-4" /> Contacts & mesh</Link>
+            <DropdownMenuItem render={<Link href="/dashboard/network" />}>
+              <Users className="size-4" /> Contacts & mesh
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.refresh()}>
