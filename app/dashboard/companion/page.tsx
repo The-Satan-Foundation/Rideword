@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Bot, Check, Copy, Fingerprint, LockKeyhole, ShieldAlert, ShieldCheck, Wifi } from 'lucide-react'
+import { CompanionChat } from '@/components/dashboard/companion-chat'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,7 +45,7 @@ export default function CompanionPage() {
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary">Paired intelligence</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Your Aegis companion</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">A deterministic identity-bound sentinel watches access attempts and performs credential-scoped handshakes between Aegis units. It never answers beyond the requester&apos;s verified role.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">The identity-bound sentinel monitors access and handles credential-scoped handshakes. The conversational AI below is separate: it answers general questions but cannot access private identity data or perform wallet actions.</p>
         </div>
         <Badge className="gap-2 border-success/30 bg-success/10 text-success"><span className="size-1.5 rounded-full bg-success" /> Paired and monitoring</Badge>
       </div>
@@ -75,6 +76,8 @@ export default function CompanionPage() {
           </CardContent>
         </Card>
       </section>
+
+      <CompanionChat companionName={companion.name} />
 
       <Card>
         <CardHeader><CardTitle className="text-base">Test a digital handshake</CardTitle><p className="text-sm text-muted-foreground">This simulator demonstrates how the companion evaluates a request before resolving it.</p></CardHeader>
